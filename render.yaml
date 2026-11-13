@@ -9,6 +9,7 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      # Set the Supabase Session Pooler URL in Render's environment settings.
       - key: DATABASE_URL
         sync: false
       - key: JWT_SECRET
