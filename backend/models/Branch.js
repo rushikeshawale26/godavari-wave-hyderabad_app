@@ -1,52 +1,84 @@
-const { createModel, requireFields } = require("./postgresModel");
+const mongoose = require("mongoose");
 
-module.exports = createModel({
-  tableName: "branches",
-  defaults: {
-    isHeadquarters: false,
-    phones: [],
-    isActive: true,
-    order: 0,
+const branchSchema = new mongoose.Schema(
+  {
+    city: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 100,
+    },
+    isHeadquarters: {
+      type: Boolean,
+      default: false,
+    },
+    address: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 500,
+    },
+    phones: {
+      type: [{ type: String, trim: true, maxlength: 32 }],
+      default: [],
+    },
+    imageUrl: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 2048,
+    },
+    lat: {
+      type: Number,
+      required: true,
+      min: -90,
+      max: 90,
+    },
+    lng: {
+      type: Number,
+      required: true,
+      min: -180,
+      max: 180,
+    },
+    region: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 100,
+    },
+    openTime: {
+      type: String,
+      required: true,
+      match: /^([01]\d|2[0-3]):[0-5]\d$/,
+    },
+    closeTime: {
+      type: String,
+      required: true,
+      match: /^([01]\d|2[0-3]):[0-5]\d$/,
+    },
+    mapPosition: {
+      x: { type: Number, required: true, min: 0, max: 100 },
+      y: { type: Number, required: true, min: 0, max: 100 },
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+    order: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
   },
-  validate(document) {
-    requireFields(document, [
-      "city",
-      "address",
-      "imageUrl",
-      "lat",
-      "lng",
-      "region",
-      "openTime",
-      "closeTime",
-      "mapPosition",
-    ]);
-    if (
-      typeof document.lat !== "number" ||
-      document.lat < -90 ||
-      document.lat > 90 ||
-      typeof document.lng !== "number" ||
-      document.lng < -180 ||
-      document.lng > 180
-    ) {
-      throw new Error("Branch coordinates are invalid");
-    }
-    if (
-      !document.mapPosition ||
-      typeof document.mapPosition.x !== "number" ||
-      document.mapPosition.x < 0 ||
-      document.mapPosition.x > 100 ||
-      typeof document.mapPosition.y !== "number" ||
-      document.mapPosition.y < 0 ||
-      document.mapPosition.y > 100
-    ) {
-      throw new Error("Branch map position is invalid");
-    }
-    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(document.openTime) ||
-        !/^([01]\d|2[0-3]):[0-5]\d$/.test(document.closeTime)) {
-      throw new Error("Branch hours must use HH:MM format");
-    }
-    if (!Array.isArray(document.phones) || !document.phones.every((phone) => typeof phone === "string")) {
-      throw new Error("Branch phones must be an array of strings");
-    }
-  },
-});
+  {
+    timestamps: true,
+    collection: "branches",
+  }
+);
+
+branchSchema.index(
+  { isHeadquarters: 1 },
+  { unique: true, partialFilterExpression: { isHeadquarters: true } }
+);
+
+module.exports = mongoose.model("Branch", branchSchema);

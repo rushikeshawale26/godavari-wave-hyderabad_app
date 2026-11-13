@@ -1,25 +1,40 @@
-const { createModel, requireFields } = require("./postgresModel");
+const mongoose = require("mongoose");
 
-module.exports = createModel({
-  tableName: "admins",
-  defaults: {
-    role: "admin",
-    permissions: ["*"],
-    isActive: true,
+const adminSchema = new mongoose.Schema(
+  {
+    username: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      lowercase: true,
+      minlength: 3,
+      maxlength: 80,
+    },
+    passwordHash: {
+      type: String,
+      required: true,
+      select: false,
+    },
+    role: {
+      type: String,
+      enum: ["admin", "super_admin", "hr_manager", "sales_manager"],
+      default: "admin",
+      required: true,
+    },
+    permissions: {
+      type: [String],
+      default: ["*"],
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
   },
-  hiddenFields: ["passwordHash"],
-  normalize(document) {
-    if (typeof document.username === "string") {
-      document.username = document.username.trim().toLowerCase();
-    }
-  },
-  validate(document) {
-    requireFields(document, ["username", "passwordHash", "role"]);
-    if (document.username.length < 3 || document.username.length > 80) {
-      throw new Error("Username must be between 3 and 80 characters");
-    }
-    if (!["admin", "super_admin", "hr_manager", "sales_manager"].includes(document.role)) {
-      throw new Error("Invalid administrator role");
-    }
-  },
-});
+  {
+    timestamps: { createdAt: "createdAt", updatedAt: "updatedAt" },
+    collection: "admins",
+  }
+);
+
+module.exports = mongoose.model("Admin", adminSchema);

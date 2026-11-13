@@ -1,7 +1,6 @@
 require("dotenv").config();
 
-const connectDB = require("../config/db");
-const { closePool } = require("../config/postgres");
+const mongoose = require("mongoose");
 const JobOpening = require("../models/JobOpening");
 
 const openings = [
@@ -35,11 +34,12 @@ const openings = [
 ];
 
 const seedJobOpenings = async () => {
-  if (!process.env.DATABASE_URL) {
-    throw new Error("DATABASE_URL is required to seed job openings");
+  if (!process.env.MONGO_URI) {
+    throw new Error("MONGO_URI is required to seed job openings");
   }
 
-  await connectDB();
+  await mongoose.connect(process.env.MONGO_URI);
+  await JobOpening.init();
 
   for (const opening of openings) {
     const result = await JobOpening.updateOne(
@@ -61,5 +61,5 @@ seedJobOpenings()
     process.exitCode = 1;
   })
   .finally(async () => {
-    await closePool();
+    await mongoose.disconnect();
   });

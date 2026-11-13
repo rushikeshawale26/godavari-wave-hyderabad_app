@@ -1,27 +1,48 @@
-const { createModel, requireFields } = require("./postgresModel");
+const mongoose = require("mongoose");
 
-module.exports = createModel({
-  tableName: "feedbacks",
-  defaults: {
-    customerName: "Anonymous",
-    email: "",
-    serviceRelated: "",
-    rating: null,
-    status: "pending",
+const feedbackSchema = new mongoose.Schema(
+  {
+    customerName: {
+      type: String,
+      trim: true,
+      default: "Anonymous",
+    },
+    email: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      default: "",
+    },
+    serviceRelated: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    comment: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 2000,
+    },
+    rating: {
+      type: Number,
+      min: 1,
+      max: 5,
+      default: null,
+    },
+    status: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+    },
   },
-  normalize(document) {
-    document.email = String(document.email || "").trim().toLowerCase();
-  },
-  validate(document) {
-    requireFields(document, ["comment"]);
-    if (!["pending", "approved", "rejected"].includes(document.status)) {
-      throw new Error("Invalid feedback status");
-    }
-    if (
-      document.rating !== null &&
-      (typeof document.rating !== "number" || document.rating < 1 || document.rating > 5)
-    ) {
-      throw new Error("Rating must be between 1 and 5");
-    }
-  },
-});
+  {
+    timestamps: true,
+    collection: "feedbacks",
+  }
+);
+
+feedbackSchema.index({ createdAt: -1 });
+feedbackSchema.index({ status: 1 });
+
+module.exports = mongoose.model("Feedback", feedbackSchema);

@@ -4,15 +4,10 @@
 
 Run the backend and frontend in separate terminals. From `backend`, run
 `npm run dev`; from `frontend`, run `npm run dev`. The backend needs a valid
-`DATABASE_URL` for PostgreSQL in `backend/.env` and listens on port `5000` by
-default. For Supabase on Render, use its Session Pooler URL and keep it in the
-Render environment settings, not in source control. The backend initializes its
-PostgreSQL JSONB-backed model tables on startup; existing MongoDB data is not
-imported.
-
-Vite proxies `/api` requests to `http://localhost:5000`; set `API_PROXY_TARGET`
-if the backend uses a different address. An empty careers list is a valid
-response when there are no active openings.
+`MONGO_URI` in `backend/.env` and listens on port `5000` by default. Vite proxies
+`/api` requests to `http://localhost:5000`; set `API_PROXY_TARGET` if the backend
+uses a different address. An empty careers list is a valid response when there
+are no active openings.
 
 ## Careers, assistant, and visitor count
 

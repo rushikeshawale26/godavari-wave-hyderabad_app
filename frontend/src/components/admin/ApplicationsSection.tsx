@@ -380,7 +380,7 @@ export default function ApplicationsSection({
               No job applications found
             </p>
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-              Applications submitted from the Careers page are stored securely and listed here.
+              Applications submitted from the Careers page are stored in MongoDB and listed here.
             </p>
           </div>
         ) : (

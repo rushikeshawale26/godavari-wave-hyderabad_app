@@ -5,7 +5,8 @@ const os = require("node:os");
 const path = require("node:path");
 const { after, before, beforeEach, test } = require("node:test");
 const jwt = require("jsonwebtoken");
-const { newDb } = require("pg-mem");
+const mongoose = require("mongoose");
+const { MongoMemoryServer } = require("mongodb-memory-server");
 
 process.env.NODE_ENV = "test";
 process.env.JWT_SECRET = "qa-test-secret-that-is-not-used-outside-tests";
@@ -26,12 +27,8 @@ const JobOpening = require("../models/JobOpening");
 const SiteContent = require("../models/SiteContent");
 const User = require("../models/user");
 const WebsiteVisitor = require("../models/WebsiteVisitor");
-const {
-  closePool,
-  initializeSchema,
-  setPoolForTests,
-} = require("../config/postgres");
 
+let memoryServer;
 let appServer;
 let apiBase;
 let app;
@@ -145,16 +142,8 @@ const pdfResume = {
 before(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "godavari-qa-test-"));
   process.env.RESUME_UPLOAD_DIR = path.join(tempRoot, "resumes");
-  const memoryDatabase = newDb();
-  memoryDatabase.public.registerFunction({
-    name: "nullif",
-    args: ["text", "text"],
-    returns: "text",
-    implementation: (value, match) => (value === match ? null : value),
-  });
-  const { Pool } = memoryDatabase.adapters.createPg();
-  setPoolForTests(new Pool());
-  await initializeSchema();
+  memoryServer = await MongoMemoryServer.create();
+  await mongoose.connect(memoryServer.getUri("godavari_qa_test"));
   app = require("../server");
   appServer = await new Promise((resolve) => {
     const server = app.listen(0, () => resolve(server));
@@ -185,7 +174,8 @@ after(async () => {
       appServer.close((error) => (error ? reject(error) : resolve()))
     );
   }
-  await closePool();
+  await mongoose.disconnect();
+  if (memoryServer) await memoryServer.stop();
   if (tempRoot) await fs.rm(tempRoot, { recursive: true, force: true });
 });
 
@@ -386,7 +376,6 @@ test("admin sessions enforce domain permissions and validate assigned permission
   assert.equal(created.status, 201);
   assert.deepEqual(created.body.data.admin.permissions, ["leads:manage"]);
   const managerId = created.body.data.admin._id;
-  const manager = await Admin.findById(managerId);
   const managerToken = await loginAdmin("limited-manager", "qa-password-123");
 
   const updatePermissions = await readJson(
@@ -426,7 +415,7 @@ test("admin sessions enforce domain permissions and validate assigned permission
   );
   assert.equal(unknownPermission.status, 400);
 
-  const { admin: existingWildcardManager, token: legacyToken } = await createAdmin({
+  const { token: legacyToken } = await createAdmin({
     username: "legacy-wildcard-manager",
     role: "sales_manager",
     permissions: ["*"],

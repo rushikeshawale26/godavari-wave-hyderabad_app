@@ -1,4 +1,4 @@
-const { isValidRecordId } = require("../models/postgresModel");
+const mongoose = require("mongoose");
 const Enquiry = require("../models/enquiry");
 
 const ENQUIRY_STATUSES = [
@@ -13,7 +13,7 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const isAdmin = (req) => req.user && req.user.role === "admin";
 const isValidId = (id) =>
-  isValidRecordId(id);
+  typeof id === "string" && mongoose.Types.ObjectId.isValid(id);
 
 const requireAdmin = (req, res) => {
   if (!req.user) {

@@ -1,4 +1,4 @@
-const { isValidRecordId } = require("../models/postgresModel");
+const mongoose = require("mongoose");
 const JobOpening = require("../models/JobOpening");
 
 const JOB_TYPES = ["Full-time", "Part-time", "Internship", "Contract"];
@@ -20,7 +20,7 @@ const REQUIRED_TEXT_FIELDS = ["title", "department", "description"];
 
 const isAdmin = (req) => req.user && req.user.role === "admin";
 const isValidId = (id) =>
-  isValidRecordId(id);
+  typeof id === "string" && mongoose.Types.ObjectId.isValid(id);
 
 const requireAdmin = (req, res) => {
   if (!req.user) {

@@ -1,6 +1,6 @@
 const fs = require("node:fs");
 const path = require("node:path");
-const { isValidRecordId } = require("../models/postgresModel");
+const mongoose = require("mongoose");
 const JobOpening = require("../models/JobOpening");
 const JobApplication = require("../models/JobApplication");
 const {
@@ -154,17 +154,17 @@ const listAdminJobs = async (req, res) => {
       }
     }
 
-    const [jobs, applicationPositions, distinctDepartments] = await Promise.all([
+    const [jobs, appCountsAgg, distinctDepartments] = await Promise.all([
       JobOpening.find(filter).sort({ createdAt: -1 }).lean(),
-      JobApplication.find().select("position").lean(),
+      JobApplication.aggregate([
+        { $group: { _id: { $toLower: "$position" }, count: { $sum: 1 } } },
+      ]),
       JobOpening.distinct("department"),
     ]);
 
-    const appCountMap = new Map();
-    for (const application of applicationPositions) {
-      const position = String(application.position || "").toLowerCase();
-      appCountMap.set(position, (appCountMap.get(position) || 0) + 1);
-    }
+    const appCountMap = new Map(
+      appCountsAgg.map((entry) => [entry._id, entry.count])
+    );
 
     const enriched = jobs.map((job) => {
       const isExpired = Boolean(
@@ -233,7 +233,7 @@ const createAdminJob = async (req, res) => {
 
 const updateAdminJob = async (req, res) => {
   const { id } = req.params;
-  if (!isValidRecordId(id)) {
+  if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({ success: false, message: "Invalid job ID" });
   }
 
@@ -286,7 +286,7 @@ const updateAdminJob = async (req, res) => {
 const toggleAdminJobStatus = async (req, res) => {
   const { id } = req.params;
   const { isActive } = req.body || {};
-  if (!isValidRecordId(id)) {
+  if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({ success: false, message: "Invalid job ID" });
   }
   if (typeof isActive !== "boolean") {
@@ -328,7 +328,7 @@ const toggleAdminJobStatus = async (req, res) => {
 
 const deleteAdminJob = async (req, res) => {
   const { id } = req.params;
-  if (!isValidRecordId(id)) {
+  if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({ success: false, message: "Invalid job ID" });
   }
 
@@ -497,7 +497,7 @@ const exportApplicationsCsv = async (req, res) => {
 
 const updateAdminApplication = async (req, res) => {
   const { id } = req.params;
-  if (!isValidRecordId(id)) {
+  if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({ success: false, message: "Invalid application ID" });
   }
 
@@ -587,7 +587,7 @@ const updateAdminApplication = async (req, res) => {
 
 const downloadApplicationResume = async (req, res) => {
   const { id } = req.params;
-  if (!isValidRecordId(id)) {
+  if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({ success: false, message: "Invalid application ID" });
   }
 
@@ -639,7 +639,7 @@ const downloadApplicationResume = async (req, res) => {
 
 const deleteAdminApplication = async (req, res) => {
   const { id } = req.params;
-  if (!isValidRecordId(id)) {
+  if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({ success: false, message: "Invalid application ID" });
   }
 

@@ -1,6 +1,6 @@
 const crypto = require("node:crypto");
 const path = require("node:path");
-const { isValidRecordId } = require("../models/postgresModel");
+const mongoose = require("mongoose");
 const JobApplication = require("../models/JobApplication");
 const {
   deleteApplicationWithResume,
@@ -28,7 +28,7 @@ const MAX_RESUME_BYTES = 3 * 1024 * 1024;
 
 const isAdmin = (req) => req.user && req.user.role === "admin";
 const isValidId = (id) =>
-  isValidRecordId(id);
+  typeof id === "string" && mongoose.Types.ObjectId.isValid(id);
 
 const requireAdmin = (req, res) => {
   if (!req.user) {
