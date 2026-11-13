@@ -1,5 +1,5 @@
 const jwt = require("jsonwebtoken");
-const mongoose = require("mongoose");
+const { isValidRecordId } = require("../models/postgresModel");
 const User = require("../models/user");
 
 const unauthorized = (res) =>
@@ -48,7 +48,7 @@ const authMiddleware = async (req, res, next) => {
     !payload ||
     typeof payload !== "object" ||
     typeof payload.userId !== "string" ||
-    !mongoose.Types.ObjectId.isValid(payload.userId)
+    !isValidRecordId(payload.userId)
   ) {
     return unauthorized(res);
   }

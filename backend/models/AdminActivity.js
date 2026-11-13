@@ -1,45 +1,24 @@
-const mongoose = require("mongoose");
+const { createModel, requireFields } = require("./postgresModel");
 
-const adminActivitySchema = new mongoose.Schema(
-  {
-    actorId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Admin",
-      required: true,
-    },
-    actorUsername: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    action: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    targetType: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    targetId: {
-      type: String,
-      trim: true,
-      default: "",
-    },
-    summary: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 400,
-    },
+module.exports = createModel({
+  tableName: "adminactivities",
+  timestamps: false,
+  normalize(document) {
+    document.actorUsername = String(document.actorUsername || "").trim();
+    document.action = String(document.action || "").trim();
+    document.targetType = String(document.targetType || "").trim();
+    document.summary = String(document.summary || "").trim();
   },
-  {
-    timestamps: { createdAt: "createdAt", updatedAt: false },
-    collection: "adminactivities",
-  }
-);
-
-adminActivitySchema.index({ createdAt: -1 });
-
-module.exports = mongoose.model("AdminActivity", adminActivitySchema);
+  validate(document) {
+    requireFields(document, [
+      "actorId",
+      "actorUsername",
+      "action",
+      "targetType",
+      "summary",
+    ]);
+    if (document.summary.length > 400) {
+      throw new Error("Summary must be 400 characters or fewer");
+    }
+  },
+});

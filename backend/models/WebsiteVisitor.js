@@ -1,28 +1,9 @@
-const mongoose = require("mongoose");
+const { createModel, requireFields } = require("./postgresModel");
 
-const websiteVisitorSchema = new mongoose.Schema(
-  {
-    visitorHash: {
-      type: String,
-      required: true,
-      unique: true,
-      select: false,
-    },
-    lastCountedAt: {
-      type: Date,
-      required: true,
-    },
-    expiresAt: {
-      type: Date,
-      required: true,
-    },
+module.exports = createModel({
+  tableName: "websitevisitors",
+  hiddenFields: ["visitorHash"],
+  validate(document) {
+    requireFields(document, ["visitorHash", "lastCountedAt", "expiresAt"]);
   },
-  {
-    timestamps: true,
-    collection: "websitevisitors",
-  }
-);
-
-websiteVisitorSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
-
-module.exports = mongoose.model("WebsiteVisitor", websiteVisitorSchema);
+});

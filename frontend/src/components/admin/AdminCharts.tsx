@@ -444,7 +444,7 @@ export function EnquirySourcesChart({
         Enquiry Sources
       </h3>
       <p className="text-xs text-slate-500 dark:text-slate-400">
-        Recorded lead acquisition channels from MongoDB enquiries
+        Recorded lead acquisition channels from submitted enquiries
       </p>
 
       {data.length === 0 ? (

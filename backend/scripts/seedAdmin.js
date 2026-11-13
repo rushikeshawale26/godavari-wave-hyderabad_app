@@ -5,18 +5,19 @@ require("dotenv").config({
 });
 
 const bcrypt = require("bcryptjs");
-const mongoose = require("mongoose");
+const connectDB = require("../config/db");
+const { closePool } = require("../config/postgres");
 const Admin = require("../models/Admin");
 
 const PASSWORD_ROUNDS = 12;
 
 const seedAdmin = async () => {
-  const mongoUri = process.env.MONGO_URI?.trim();
+  const databaseUrl = process.env.DATABASE_URL?.trim();
   const username = process.env.ADMIN_USERNAME?.trim().toLowerCase();
   const password = process.env.ADMIN_PASSWORD;
 
-  if (!mongoUri) {
-    console.error("Error: MONGO_URI is required in backend/.env");
+  if (!databaseUrl) {
+    console.error("Error: DATABASE_URL is required in backend/.env");
     process.exitCode = 1;
     return;
   }
@@ -38,13 +39,12 @@ const seedAdmin = async () => {
   }
 
   try {
-    await mongoose.connect(mongoUri);
-    await Admin.syncIndexes();
+    await connectDB();
 
     const existingAdmin = await Admin.findOne({ username }).select("_id username");
     if (existingAdmin) {
       console.log(
-        `Admin account "${existingAdmin.username}" already exists in "admins". Skipping duplicate seed.`
+        `Admin account "${existingAdmin.username}" already exists in PostgreSQL. Skipping duplicate seed.`
       );
       return;
     }
@@ -52,7 +52,7 @@ const seedAdmin = async () => {
     const totalAdmins = await Admin.countDocuments();
     if (totalAdmins > 0 && process.env.ALLOW_ADDITIONAL_ADMIN !== "true") {
       console.log(
-        `An initial admin account already exists (${totalAdmins} found in "admins"). Set ALLOW_ADDITIONAL_ADMIN=true in env only if provisioning an extra admin intentionally.`
+        `An initial admin account already exists (${totalAdmins} found in PostgreSQL). Set ALLOW_ADDITIONAL_ADMIN=true in env only if provisioning an extra admin intentionally.`
       );
       return;
     }
@@ -66,7 +66,7 @@ const seedAdmin = async () => {
     });
 
     console.log(
-      `Successfully created initial admin "${username}" in collection "admins".`
+      `Successfully created initial admin "${username}" in PostgreSQL.`
     );
   } catch (error) {
     if (error.code === 11000) {
@@ -78,7 +78,7 @@ const seedAdmin = async () => {
     console.error("Failed to seed admin account:", error.message || error);
     process.exitCode = 1;
   } finally {
-    await mongoose.disconnect();
+    await closePool();
   }
 };
 

@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+const { isValidRecordId } = require("../models/postgresModel");
 const Branch = require("../models/Branch");
 
 const editableFields = [
@@ -52,7 +52,7 @@ const getBranches = async (req, res) => {
 };
 
 const getBranchById = async (req, res) => {
-  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+  if (!isValidRecordId(req.params.id)) {
     return res.status(400).json({
       success: false,
       data: null,
@@ -122,7 +122,7 @@ const createBranch = async (req, res) => {
 };
 
 const updateBranch = async (req, res) => {
-  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+  if (!isValidRecordId(req.params.id)) {
     return res.status(400).json({
       success: false,
       data: null,
@@ -184,7 +184,7 @@ const updateBranch = async (req, res) => {
 };
 
 const deleteBranch = async (req, res) => {
-  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+  if (!isValidRecordId(req.params.id)) {
     return res.status(400).json({
       success: false,
       data: null,

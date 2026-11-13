@@ -11,6 +11,7 @@ const {
   adminSessionMiddleware,
   requireAdminPermission,
 } = require("../middleware/adminSessionMiddleware");
+const { createAdminSessionMiddleware } = require("../config/session");
 
 const router = express.Router();
 
@@ -88,6 +89,7 @@ const branchFields = (optional = false) => [
 ];
 
 const adminWriters = [
+  createAdminSessionMiddleware(),
   adminSessionMiddleware,
   requireAdminPermission("content:manage"),
 ];
@@ -98,7 +100,7 @@ router.get(
   validateRequest,
   getBranches
 );
-router.get("/:id", param("id").isMongoId(), validateRequest, getBranchById);
+router.get("/:id", param("id").isUUID(4), validateRequest, getBranchById);
 router.post(
   "/",
   ...adminWriters,
@@ -109,7 +111,7 @@ router.post(
 router.put(
   "/:id",
   ...adminWriters,
-  param("id").isMongoId(),
+  param("id").isUUID(4),
   ...branchFields(true),
   validateRequest,
   updateBranch
@@ -117,7 +119,7 @@ router.put(
 router.patch(
   "/:id",
   ...adminWriters,
-  param("id").isMongoId(),
+  param("id").isUUID(4),
   ...branchFields(true),
   validateRequest,
   updateBranch
@@ -125,7 +127,7 @@ router.patch(
 router.delete(
   "/:id",
   ...adminWriters,
-  param("id").isMongoId(),
+  param("id").isUUID(4),
   validateRequest,
   deleteBranch
 );

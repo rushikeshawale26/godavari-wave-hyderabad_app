@@ -1,6 +1,6 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const mongoose = require("mongoose");
+const { isValidRecordId } = require("../models/postgresModel");
 const User = require("../models/user");
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -170,7 +170,7 @@ const getUserProfile = async (req, res) => {
         .status(401)
         .json({ success: false, message: "Authentication is required" });
     }
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
+    if (!isValidRecordId(userId)) {
       return res
         .status(401)
         .json({ success: false, message: "Invalid authenticated user" });
@@ -199,7 +199,7 @@ const updateUserProfile = async (req, res) => {
         .status(401)
         .json({ success: false, message: "Authentication is required" });
     }
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
+    if (!isValidRecordId(userId)) {
       return res
         .status(401)
         .json({ success: false, message: "Invalid authenticated user" });

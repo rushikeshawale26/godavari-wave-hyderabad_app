@@ -5,8 +5,7 @@ const os = require("node:os");
 const path = require("node:path");
 const { after, before, beforeEach, test } = require("node:test");
 const jwt = require("jsonwebtoken");
-const mongoose = require("mongoose");
-const { MongoMemoryServer } = require("mongodb-memory-server");
+const { newDb } = require("pg-mem");
 
 process.env.NODE_ENV = "test";
 process.env.JWT_SECRET = "qa-test-secret-that-is-not-used-outside-tests";
@@ -27,19 +26,16 @@ const JobOpening = require("../models/JobOpening");
 const SiteContent = require("../models/SiteContent");
 const User = require("../models/user");
 const WebsiteVisitor = require("../models/WebsiteVisitor");
+const {
+  closePool,
+  initializeSchema,
+  setPoolForTests,
+} = require("../config/postgres");
 
-let memoryServer;
 let appServer;
 let apiBase;
 let app;
 let tempRoot;
-
-const adminToken = (admin) =>
-  jwt.sign(
-    { tokenType: "admin_session", adminId: admin._id.toString() },
-    process.env.JWT_SECRET,
-    { expiresIn: "1h" }
-  );
 
 const userToken = (user) =>
   jwt.sign({ userId: user._id.toString() }, process.env.JWT_SECRET, {
@@ -49,7 +45,13 @@ const userToken = (user) =>
 const request = (route, { method = "GET", body, token } = {}) => {
   const headers = {};
   if (body !== undefined) headers["content-type"] = "application/json";
-  if (token) headers.authorization = `Bearer ${token}`;
+  if (token) {
+    if (token.startsWith("gw_admin_sid=")) {
+      headers.cookie = token;
+    } else {
+      headers.authorization = `Bearer ${token}`;
+    }
+  }
   return fetch(`${apiBase}${route}`, {
     method,
     headers,
@@ -67,14 +69,34 @@ const createAdmin = async ({
   role = "admin",
   permissions = ["*"],
 } = {}) => {
+  const bcrypt = require("bcryptjs");
+  const password = "qa-password-123";
   const admin = await Admin.create({
     username,
-    passwordHash: "test-password-hash",
+    passwordHash: await bcrypt.hash(password, 4),
     role,
     permissions,
     isActive: true,
   });
-  return { admin, token: adminToken(admin) };
+  const login = await request("/api/admin/auth/login", {
+    method: "POST",
+    body: { username, password },
+  });
+  assert.equal(login.status, 200);
+  const sessionCookie = login.headers
+    .get("set-cookie")
+    ?.match(/gw_admin_sid=[^;]+/)?.[0];
+  assert.ok(sessionCookie, "admin login should set its session cookie");
+  return { admin, token: sessionCookie };
+};
+
+const loginAdmin = async (username, password) => {
+  const response = await request("/api/admin/auth/login", {
+    method: "POST",
+    body: { username, password },
+  });
+  assert.equal(response.status, 200);
+  return response.headers.get("set-cookie")?.match(/gw_admin_sid=[^;]+/)?.[0];
 };
 
 const createUser = async ({ email = "qa-admin@example.test", role = "admin" } = {}) => {
@@ -123,8 +145,16 @@ const pdfResume = {
 before(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "godavari-qa-test-"));
   process.env.RESUME_UPLOAD_DIR = path.join(tempRoot, "resumes");
-  memoryServer = await MongoMemoryServer.create();
-  await mongoose.connect(memoryServer.getUri("godavari_qa_test"));
+  const memoryDatabase = newDb();
+  memoryDatabase.public.registerFunction({
+    name: "nullif",
+    args: ["text", "text"],
+    returns: "text",
+    implementation: (value, match) => (value === match ? null : value),
+  });
+  const { Pool } = memoryDatabase.adapters.createPg();
+  setPoolForTests(new Pool());
+  await initializeSchema();
   app = require("../server");
   appServer = await new Promise((resolve) => {
     const server = app.listen(0, () => resolve(server));
@@ -155,8 +185,7 @@ after(async () => {
       appServer.close((error) => (error ? reject(error) : resolve()))
     );
   }
-  await mongoose.disconnect();
-  if (memoryServer) await memoryServer.stop();
+  await closePool();
   if (tempRoot) await fs.rm(tempRoot, { recursive: true, force: true });
 });
 
@@ -226,7 +255,7 @@ test("branch API validates writes, filters regions, and protects mutations", asy
       body: branchPayload({ lat: 100 }),
     })
   );
-  assert.equal(invalid.status, 400);
+  assert.equal(invalid.status, 400, JSON.stringify(invalid.body));
 
   const created = await readJson(
     await request("/api/branches", {
@@ -358,7 +387,7 @@ test("admin sessions enforce domain permissions and validate assigned permission
   assert.deepEqual(created.body.data.admin.permissions, ["leads:manage"]);
   const managerId = created.body.data.admin._id;
   const manager = await Admin.findById(managerId);
-  const managerToken = adminToken(manager);
+  const managerToken = await loginAdmin("limited-manager", "qa-password-123");
 
   const updatePermissions = await readJson(
     await request(`/api/admin/accounts/${managerId}`, {
@@ -397,14 +426,11 @@ test("admin sessions enforce domain permissions and validate assigned permission
   );
   assert.equal(unknownPermission.status, 400);
 
-  const existingWildcardManager = await Admin.create({
+  const { admin: existingWildcardManager, token: legacyToken } = await createAdmin({
     username: "legacy-wildcard-manager",
-    passwordHash: "test-password-hash",
     role: "sales_manager",
     permissions: ["*"],
-    isActive: true,
   });
-  const legacyToken = adminToken(existingWildcardManager);
   const deniedAccounts = await readJson(
     await request("/api/admin/accounts", { token: legacyToken })
   );

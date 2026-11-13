@@ -1,5 +1,5 @@
 const bcrypt = require("bcryptjs");
-const mongoose = require("mongoose");
+const { isValidRecordId } = require("../models/postgresModel");
 const Admin = require("../models/Admin");
 const AdminActivity = require("../models/AdminActivity");
 const Enquiry = require("../models/enquiry");
@@ -430,7 +430,7 @@ const createAdminAccount = async (req, res) => {
 
 const updateAdminAccount = async (req, res) => {
   const { id } = req.params;
-  if (!mongoose.Types.ObjectId.isValid(id)) {
+  if (!isValidRecordId(id)) {
     return res.status(400).json({ success: false, message: "Invalid admin ID" });
   }
 
@@ -614,16 +614,22 @@ const getAdminOverview = async (req, res) => {
           })
         : Promise.resolve(0),
       canViewChat
-        ? ChatConversation.aggregate([
-            {
-              $group: {
-                _id: null,
-                totalConversations: { $sum: 1 },
-                totalQuestions: { $sum: "$userQuestionsCount" },
-                unansweredQuestions: { $sum: "$unansweredCount" },
+        ? ChatConversation.find()
+            .select("userQuestionsCount unansweredCount")
+            .lean()
+            .then((conversations) => [
+              {
+                totalConversations: conversations.length,
+                totalQuestions: conversations.reduce(
+                  (total, conversation) => total + (conversation.userQuestionsCount || 0),
+                  0
+                ),
+                unansweredQuestions: conversations.reduce(
+                  (total, conversation) => total + (conversation.unansweredCount || 0),
+                  0
+                ),
               },
-            },
-          ])
+            ])
         : Promise.resolve([]),
     ]);
 
@@ -1059,7 +1065,7 @@ const exportLeadsCsv = async (req, res) => {
 
 const getLeadById = async (req, res) => {
   const { id } = req.params;
-  if (!mongoose.Types.ObjectId.isValid(id)) {
+  if (!isValidRecordId(id)) {
     return res.status(400).json({ success: false, message: "Invalid lead ID" });
   }
 
@@ -1091,7 +1097,7 @@ const getLeadById = async (req, res) => {
 
 const updateLead = async (req, res) => {
   const { id } = req.params;
-  if (!mongoose.Types.ObjectId.isValid(id)) {
+  if (!isValidRecordId(id)) {
     return res.status(400).json({ success: false, message: "Invalid lead ID" });
   }
 
@@ -1224,7 +1230,7 @@ const updateLead = async (req, res) => {
 
 const addLeadNote = async (req, res) => {
   const { id } = req.params;
-  if (!mongoose.Types.ObjectId.isValid(id)) {
+  if (!isValidRecordId(id)) {
     return res.status(400).json({ success: false, message: "Invalid lead ID" });
   }
 
@@ -1288,7 +1294,7 @@ const addLeadNote = async (req, res) => {
 
 const deleteLead = async (req, res) => {
   const { id } = req.params;
-  if (!mongoose.Types.ObjectId.isValid(id)) {
+  if (!isValidRecordId(id)) {
     return res.status(400).json({ success: false, message: "Invalid lead ID" });
   }
 
@@ -1439,7 +1445,7 @@ const listChatConversations = async (req, res) => {
 
 const getChatConversationById = async (req, res) => {
   const { id } = req.params;
-  if (!mongoose.Types.ObjectId.isValid(id)) {
+  if (!isValidRecordId(id)) {
     return res
       .status(400)
       .json({ success: false, message: "Invalid conversation ID" });
@@ -1496,7 +1502,7 @@ const getFeedbackSubmissions = async (_req, res) => {
 const updateFeedbackStatus = async (req, res) => {
   const { id } = req.params;
   const { status } = req.body || {};
-  if (!mongoose.Types.ObjectId.isValid(id)) {
+  if (!isValidRecordId(id)) {
     return res.status(400).json({ success: false, message: "Invalid feedback ID" });
   }
   if (!["pending", "approved", "rejected"].includes(status)) {
@@ -1538,7 +1544,7 @@ const updateFeedbackStatus = async (req, res) => {
 
 const deleteFeedback = async (req, res) => {
   const { id } = req.params;
-  if (!mongoose.Types.ObjectId.isValid(id)) {
+  if (!isValidRecordId(id)) {
     return res.status(400).json({ success: false, message: "Invalid feedback ID" });
   }
 

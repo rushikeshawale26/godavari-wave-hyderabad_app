@@ -1,40 +1,22 @@
+const { createModel, requireFields } = require("./postgresModel");
 
-const mongoose = require("mongoose");
-
-const userSchema = new mongoose.Schema(
-  {
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    email: {
-      type: String,
-      required: true,
-      unique: true,
-      lowercase: true,
-      trim: true,
-    },
-    password: {
-      type: String,
-      required: true,
-      minlength: 8,
-      select: false,
-    },
-    role: {
-      type: String,
-      enum: ["admin", "user"],
-      default: "user",
-    },
-    isActive: {
-      type: Boolean,
-      default: true,
-    },
+module.exports = createModel({
+  tableName: "users",
+  defaults: {
+    role: "user",
+    isActive: true,
   },
-  {
-    timestamps: true,
-    collection: "users",
-  }
-);
-
-module.exports = mongoose.model("User", userSchema);
+  hiddenFields: ["password"],
+  normalize(document) {
+    document.email = String(document.email || "").trim().toLowerCase();
+  },
+  validate(document) {
+    requireFields(document, ["name", "email", "password"]);
+    if (document.password.length < 8) {
+      throw new Error("Password must be at least 8 characters");
+    }
+    if (!["admin", "user"].includes(document.role)) {
+      throw new Error("Invalid user role");
+    }
+  },
+});

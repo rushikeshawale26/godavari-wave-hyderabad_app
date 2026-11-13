@@ -1,16 +1,10 @@
 
-const mongoose = require("mongoose");
+const { checkDatabase, initializeSchema } = require("./postgres");
 
 const connectDB = async () => {
-  try {
-    await mongoose.connect(process.env.MONGO_URI);
-
-    console.log("MongoDB Connected Successfully");
-    console.log(`Database: ${mongoose.connection.name}`);
-  } catch (error) {
-    console.error("MongoDB Connection Failed:", error.message);
-    process.exit(1);
-  }
+  await initializeSchema();
+  await checkDatabase();
+  console.log("PostgreSQL connected successfully");
 };
 
 module.exports = connectDB;

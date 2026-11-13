@@ -1,6 +1,7 @@
 require("dotenv").config();
 
-const mongoose = require("mongoose");
+const connectDB = require("../config/db");
+const { closePool } = require("../config/postgres");
 const Branch = require("../models/Branch");
 
 const branches = [
@@ -69,12 +70,11 @@ const branches = [
 ];
 
 const seedBranches = async () => {
-  if (!process.env.MONGO_URI) {
-    throw new Error("MONGO_URI is required to seed branches");
+  if (!process.env.DATABASE_URL) {
+    throw new Error("DATABASE_URL is required to seed branches");
   }
 
-  await mongoose.connect(process.env.MONGO_URI);
-  await Branch.init();
+  await connectDB();
 
   for (const branch of branches) {
     const result = await Branch.updateOne(
@@ -94,5 +94,5 @@ seedBranches()
     process.exitCode = 1;
   })
   .finally(async () => {
-    await mongoose.disconnect();
+    await closePool();
   });

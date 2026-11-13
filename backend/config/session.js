@@ -1,5 +1,6 @@
 const session = require("express-session");
-const { MongoStore } = require("connect-mongo");
+const PostgreSQLStore = require("connect-pg-simple")(session);
+const { getPool } = require("./postgres");
 
 const ADMIN_SESSION_COOKIE_NAME = "gw_admin_sid";
 
@@ -38,14 +39,15 @@ const createAdminSessionMiddleware = () => {
     return sessionMiddlewareInstance;
   }
 
-  const mongoUrl = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/godavari_wave_hyderabad";
-  const store = MongoStore.create({
-    mongoUrl,
-    collectionName: "sessions",
-    ttl: 24 * 60 * 60, // 24 hours server-side document TTL for automatic reaping
-    autoRemove: "native",
-    touchAfter: 60, // Don't write to DB repeatedly if session was unchanged
-  });
+  const store =
+    process.env.NODE_ENV === "test"
+      ? undefined
+      : new PostgreSQLStore({
+          pool: getPool(),
+          tableName: "admin_sessions",
+          createTableIfMissing: true,
+          ttl: 24 * 60 * 60,
+        });
 
   const cookieOptions = getAdminSessionCookieOptions();
 

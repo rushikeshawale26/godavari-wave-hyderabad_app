@@ -334,7 +334,7 @@ export function AdminContentSection({
         branches,
         servicesOverrides: services,
       })
-      toast.success('Website content configuration saved to MongoDB.')
+      toast.success('Website content configuration saved successfully.')
     } catch (err) {
       if (isAdminUnauthorizedError(err)) {
         onUnauthorized()

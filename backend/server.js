@@ -8,8 +8,8 @@ const express = require("express");
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
 const helmet = require("helmet");
-const mongoose = require("mongoose");
 const connectDB = require("./config/db");
+const { checkDatabase } = require("./config/postgres");
 const userRoutes = require("./routes/userRoutes");
 const enquiryRoutes = require("./routes/enquiryRoutes");
 const jobApplicationRoutes = require("./routes/jobApplicationRoutes");
@@ -51,14 +51,23 @@ app.use(
   jobApplicationRoutes
 );
 app.use(express.json({ limit: "100kb" }));
-app.get("/api/health", (_req, res) => {
-  const dbReady = mongoose.connection.readyState === 1;
-  return res.status(dbReady ? 200 : 503).json({
-    success: dbReady,
-    status: dbReady ? "ok" : "degraded",
-    db: dbReady ? "connected" : "disconnected",
-    uptimeSeconds: Math.floor(process.uptime()),
-  });
+app.get("/api/health", async (_req, res) => {
+  try {
+    await checkDatabase();
+    return res.status(200).json({
+      success: true,
+      status: "ok",
+      db: "connected",
+      uptimeSeconds: Math.floor(process.uptime()),
+    });
+  } catch {
+    return res.status(503).json({
+      success: false,
+      status: "degraded",
+      db: "disconnected",
+      uptimeSeconds: Math.floor(process.uptime()),
+    });
+  }
 });
 app.use("/api/users", userRoutes);
 app.use("/api/enquiries", enquiryRoutes);

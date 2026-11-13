@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+const { isValidRecordId } = require("../models/postgresModel");
 const Admin = require("../models/Admin");
 const {
   ADMIN_SESSION_COOKIE_NAME,
@@ -39,7 +39,7 @@ const adminSessionMiddleware = async (req, res, next) => {
   });
 
   const adminId = req.session && req.session.adminId;
-  if (!adminId || typeof adminId !== "string" || !mongoose.Types.ObjectId.isValid(adminId)) {
+  if (!isValidRecordId(adminId)) {
     return unauthorized(res);
   }
 
