@@ -4,7 +4,7 @@ export const api = axios.create({
   baseURL:
     import.meta.env.VITE_API_URL ||
     import.meta.env.VITE_API_BASE_URL ||
-    '',
+    'https://godavari-wave-api.onrender.com',
   headers: { 'Content-Type': 'application/json' },
   timeout: 15000,
 })
